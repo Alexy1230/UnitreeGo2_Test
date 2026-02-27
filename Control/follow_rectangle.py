@@ -13,6 +13,9 @@ def rectangle_open_loop(sc):
     
     t_long = L / v_const
     t_wide = W / v_const
+    """
+    SHOULD decrease the time??? or decrease the velocity???
+    """
     
     phases = [
         (v_const, 0, t_long),  # front
@@ -42,4 +45,10 @@ if __name__ == "__main__":
     sport_client.SetTimeout(10.0)
     sport_client.Init()
 
-    input()
+    try:
+        print("Start moving.")
+        rectangle_open_loop(sport_client)
+    except KeyboardInterrupt:
+        print("Stop by Keyboard.")
+
+    

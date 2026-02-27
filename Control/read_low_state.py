@@ -1,8 +1,7 @@
-"read robot state -- low_level"
+"read robot state (IMU, pos_motor0) -- low_level"
 
 import time
 from unitree_sdk2py.core.channel import ChannelFactoryInitialize, ChannelSubscriber
-from unitree_sdk2py.go2.sport.sport_client import SportClient
 from unitree_sdk2py.idl.unitree_go.msg.dds_ import LowState_
 
 def LowStateHandler(msg):
