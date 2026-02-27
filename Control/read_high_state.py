@@ -11,6 +11,7 @@ def SportStateHandler(msg):
     print(f"Position: {msg.position}")
     print(f"Velocity: {msg.velocity}")
     print(f"Yaw speed: {msg.yaw_speed}")
+    time.sleep(0.5)
 
 if __name__ == "__main__":
     ChannelFactoryInitialize(0)
