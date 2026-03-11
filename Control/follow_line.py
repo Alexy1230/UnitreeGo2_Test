@@ -1,4 +1,4 @@
-"Generate a rectangle trajectory, the robot move based on that, PID closed-loop"
+"The robot moves a straight line trajectory"
 
 import time
 import math
@@ -59,7 +59,7 @@ class RobotAgent:
                 time.sleep(0.1)
                 continue
 
-            with self.lock: # 确保读取 $x, y, yaw$ 时数据是对齐的
+            with self.lock:
                 position = self.position[:]
                 yaw = self.yaw
 
@@ -101,6 +101,76 @@ class RobotAgent:
             
             time.sleep(0.05)
 
+    def run_straight_line(self):
+        # run six tiles
+        L = 0.3 * 6 
+        vx_max = 0.3
+        vy_max = 0.1
+        vyaw_max = 0.1
+
+        # record current location
+        with self.lock:
+            start_x = self.position[0]
+            start_y = self.position[1]
+            start_yaw = self.yaw
+
+        target_world_x = start_x + L * math.cos(start_yaw)
+        target_world_y = start_y + L * math.sin(start_yaw)
+        target_world_yaw = start_yaw
+
+        dest_point = [[target_world_x, target_world_y, target_world_yaw]]
+
+        print(f"Move from ({start_x}, {start_y}) to ({dest_point[0][0]},{dest_point[0][1]}) m.")
+
+        while True:
+            if not self.data_received:
+                time.sleep(0.1)
+                continue
+
+            with self.lock:
+                position = self.position[:]
+                yaw = self.yaw
+
+            target = dest_point[0]
+            
+            # compute relative distance
+            world_error_x = target[0] - position[0]
+            world_error_y = target[1] - position[1]
+
+            # transform to body frame
+            cos_y = math.cos(-yaw)
+            sin_y = math.sin(-yaw)
+            body_error_x = world_error_x * cos_y - world_error_y * sin_y
+            body_error_y = world_error_x * sin_y + world_error_y * cos_y
+
+            error_dist = math.sqrt(body_error_x**2 + body_error_y**2)
+            error_ang = target[2] - yaw
+            error_ang = math.atan2(math.sin(error_ang), math.cos(error_ang))
+
+            # specify if reach
+            if error_dist < 0.05:
+                print("Reach target point.")
+                self.sport_client.StopMove()
+                time.sleep(0.5)
+                # # stand down for safety
+                # self.sport_client.StandDown()
+                # time.sleep(2.5)
+                return
+            else:
+                # velocity tracking
+                vx_desired = body_error_x * self.kp_
+                vx_cmd = max(-vx_max, min(vx_max, vx_desired))
+
+                vy_desired = body_error_y * self.kp_
+                vy_cmd = max(-vy_max, min(vy_max, vy_desired))
+
+                vyaw_desired = error_ang * self.kp_ang_
+                vyaw_cmd = max(-vyaw_max, min(vyaw_max, vyaw_desired))
+
+                self.sport_client.Move(vx_cmd, vy_cmd, vyaw_cmd)
+            
+            time.sleep(0.05)
+
 
 if __name__ == "__main__":
     # DDS connection initialization
@@ -110,8 +180,9 @@ if __name__ == "__main__":
     robot.Init()
 
     try:
+        input("TYPE TO START MOVING:")
         print("Start moving.")
-        robot.run_rectangle()
+        robot.run_straight_line()
     except KeyboardInterrupt:
         print("Stop by Keyboard.")
 
